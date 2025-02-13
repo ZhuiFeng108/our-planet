@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>❤️我❤️们❤️的❤️星❤️球❤️</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        audio {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <audio id="background-music" preload="auto" loop>
+        <source id="audio-source" type="audio/mp3">
+    </audio>
+
+
+    <script>
+        // 背景音乐
+        let musicList = [
+            "https://www.ihaoge.net/server/1/177795167.mp3",
+        ];
+
+        function playRandomMusic() {
+            const randomIndex = Math.floor(Math.random() * musicList.length);
+            const audioElement = document.getElementById("background-music");
+            const audioSource = document.getElementById("audio-source");
+
+            // 设置随机选择的音频源
+            audioSource.src = musicList[randomIndex];
+            audioElement.load();  // 重新加载音频
+            audioElement.play();  // 播放音频
+        }
+
+        // 监听触摸事件，用户首次触摸后播放音乐
+        let hasTouched = false;
+
+        let scene, camera, renderer, group;
+        let isDragging = false, previousTouchPosition = { x: 0, y: 0 };
+        let autoRotate = true, lastInteractionTime = 0;
+        let targetZoom = 100;  // 初始缩放调整为适合手机屏幕
+        let targetRotation = { x: null, y: null };
+        let focusedImage = null;
+        let focusTimeout = null;
+        let touchStartDistance = 0;  // 记录双指缩放初始距离
+
+        const imageCount = 123;
+        const selectedCount = 100;
+
+        // 生成一个从 1 到 imageCount 的数组
+        const imageIndexes = Array.from({ length: imageCount }, (_, i) => i + 1);
+
+        // 打乱数组中的数字以确保随机性
+        for (let i = imageCount - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [imageIndexes[i], imageIndexes[j]] = [imageIndexes[j], imageIndexes[i]];
+        }
+
+        // 选取前 123 个不重复的随机图像索引
+        const selectedIndexes = imageIndexes.slice(0, selectedCount);
+
+        // 根据选中的索引生成图像 URL
+        const imageUrls = selectedIndexes.map(i =>
+            `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/${i}.jpg`
+        );
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.z = targetZoom;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            group = new THREE.Group();
+            createPhotoSphere();
+            scene.add(group);
+
+            document.addEventListener("touchstart", onTouchStart, { passive: false });
+            document.addEventListener("touchmove", onTouchMove, { passive: false });
+            document.addEventListener("touchend", onTouchEnd, { passive: false });
+
+            animate();
+        }
+
+        function createPhotoSphere() {
+            const radius = 17.6;  // 适配手机屏幕
+            const textureLoader = new THREE.TextureLoader();
+
+            imageUrls.forEach((url, index) => {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = 900 * devicePixelRatio;  // 调整为 1040x1040，增加20px边距
+                canvas.height = 1200 * devicePixelRatio;
+
+                const image = new Image();
+                image.crossOrigin = "Anonymous";
+                image.src = url
+
+                image.onload = () => {
+                    ctx.fillStyle = "white";  // 背景颜色，确保描边可见
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);  // 填充整个 canvas，确保背景显示
+
+                    // 在 canvas 上绘制图片，留 20px 边距
+                    ctx.drawImage(image, 20 * devicePixelRatio, 20 * devicePixelRatio, canvas.width - 40 * devicePixelRatio, canvas.height - 40 * devicePixelRatio);
+
+                    const texture = new THREE.CanvasTexture(canvas);
+                    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    // texture.minFilter = THREE.LinearFilter;
+                    // texture.magFilter = THREE.LinearFilter;
+                    texture.generateMipmaps = true;
+                    texture.flipY = false; // 解决默认 Y 轴镜像问题
+                    texture.needsUpdate = true; // 确保 WebGL 正确更新纹理
+
+                    const geometry = new THREE.PlaneGeometry(3, 4); // 使 Plane 与 900x1200 适配
+
+                    const material = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        side: THREE.DoubleSide,
+                        transparent: true
+                    });
+
+                    const plane = new THREE.Mesh(geometry, material);
+
+                    // **修复左右镜像问题**
+                    plane.scale.x = -1; // 让图片水平翻转
+                    plane.scale.y = -1; // 让图片水平翻转
+
+                    const phi = Math.acos(-1 + (2 * index) / selectedCount);
+                    const theta = Math.sqrt(selectedCount * Math.PI) * phi;
+
+                    plane.position.x = radius * Math.sin(phi) * Math.cos(theta);
+                    plane.position.y = radius * Math.cos(phi);
+                    plane.position.z = radius * Math.sin(phi) * Math.sin(theta);
+
+                    plane.lookAt(0, 0, 0);
+                    plane.userData = { index };
+
+                    group.add(plane);
+                };
+            });
+        }
+
+        let touchStartTime = 0;
+        let hasMoved = false;
+
+        function onTouchStart(event) {
+            document.body.addEventListener("touchstart", () => {
+
+                if (!hasTouched) {
+                    hasTouched = true;  // 标记为已触摸
+
+                    // 播放随机音乐
+                    playRandomMusic();
+
+                    // 每当一首歌播放完时，再次随机播放
+                    const audioElement = document.getElementById("background-music");
+                    audioElement.onended = () => {
+                        playRandomMusic();
+                    };
+
+                    // 移除事件监听器，防止后续触摸再次触发
+                    document.body.removeEventListener("touchstart", arguments.callee);
+                }
+            });
+            if (event.touches.length === 1) {
+                isDragging = true;
+                hasMoved = false;  // 初始化移动标记
+                touchStartTime = Date.now();  // 记录触摸开始时间
+                previousTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                stopAutoRotate();
+                cancelFocus();
+            } else if (event.touches.length === 2) {
+                touchStartDistance = getTouchDistance(event.touches);
+                stopAutoRotate();
+            }
+        }
+
+        function onTouchMove(event) {
+            event.preventDefault();
+
+            if (event.touches.length === 1 && isDragging) {
+                hasMoved = true;  // 标记已移动
+                const deltaX = event.touches[0].clientX - previousTouchPosition.x;
+                const deltaY = event.touches[0].clientY - previousTouchPosition.y;
+
+                group.rotation.y += deltaX * 0.003;
+                group.rotation.x += deltaY * 0.003;
+
+                previousTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+            } else if (event.touches.length === 2) {
+                let newDistance = getTouchDistance(event.touches);
+                let zoomFactor = newDistance / touchStartDistance;
+                targetZoom /= zoomFactor;
+                targetZoom = Math.max(22.6, Math.min(100, targetZoom));
+                touchStartDistance = newDistance;
+            }
+        }
+
+        function onTouchEnd(event) {
+            if (event.touches.length === 0) {
+                isDragging = false;
+                resumeAutoRotate();
+            }
+
+            const touchTime = Date.now() - touchStartTime;  // 计算触摸时长
+
+            // **只有单指点击、触摸时间短且没有移动时才触发 focusOnImage**
+            if (event.changedTouches.length === 1 && !hasMoved && touchTime < 200) {
+                const touch = event.changedTouches[0];
+                const raycaster = new THREE.Raycaster();
+                const touchPoint = new THREE.Vector2(
+                    (touch.clientX / window.innerWidth) * 2 - 1,
+                    -(touch.clientY / window.innerHeight) * 2 + 1
+                );
+
+                raycaster.setFromCamera(touchPoint, camera);
+                const intersects = raycaster.intersectObjects(group.children);
+
+                if (intersects.length > 0) {
+                    focusOnImage(intersects[0].object);  // 只有真正点击到图片才聚焦
+                    stopAutoRotate();
+                }
+            }
+        }
+
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function focusOnImage(image) {
+            focusedImage = image;
+
+            const targetDirection = new THREE.Vector3().copy(image.position).normalize();
+            const spherical = new THREE.Spherical().setFromVector3(targetDirection);
+
+            targetRotation.y = -spherical.theta;
+            targetRotation.x = -(spherical.phi - Math.PI / 2);
+            targetZoom = 26;  // 放大到图片
+
+            clearTimeout(focusTimeout);
+            focusTimeout = setTimeout(() => {
+                cancelFocus();
+                // resetViewSize();
+                resumeAutoRotate();
+            }, 2000);
+        }
+
+        function resetViewSize() {
+            targetZoom = 2000;  // 恢复默认缩放
+        }
+
+        function cancelFocus() {
+            focusedImage = null;
+            targetRotation = { x: null, y: null };
+        }
+
+        function stopAutoRotate() {
+            autoRotate = false;
+            lastInteractionTime = Date.now();
+        }
+
+        function resumeAutoRotate() {
+            setTimeout(() => {
+                if (Date.now() - lastInteractionTime >= 1000 && !focusedImage && !isDragging) {
+                    autoRotate = true;
+                }
+            }, 2000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (autoRotate) {
+                group.rotation.y += 0.001;
+            }
+
+            if (focusedImage) {
+                group.rotation.x += (targetRotation.x - group.rotation.x) * 0.1;
+                group.rotation.y += (targetRotation.y - group.rotation.y) * 0.1;
+            }
+
+            camera.position.z += (targetZoom - camera.position.z) * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+
+</body>
+
+</html>
