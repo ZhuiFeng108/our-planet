@@ -79,7 +79,7 @@
         // const imageUrls = Array.from({ length: 160 }, (_, i) => `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/200.jpg`);
 
         const imageUrls = selectedIndexes.map(i =>
-            `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/${i}.jpg`
+            `https://picsum.photos/900/1200?random=${i + 1}`
         );
         let textureLoader;
 
