@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>❤️我们的星球❤️</title>
+    <title>❤️我❤️们❤️的❤️星❤️球❤️</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
@@ -61,7 +61,7 @@
         let touchStartDistance = 0;  // 记录双指缩放初始距离
 
         const imageCount = 123;
-        const selectedCount = 123;
+        const selectedCount = 100;
 
         // 生成一个从 1 到 imageCount 的数组
         const imageIndexes = Array.from({ length: imageCount }, (_, i) => i + 1);
@@ -76,13 +76,9 @@
         const selectedIndexes = imageIndexes.slice(0, selectedCount);
 
         // 根据选中的索引生成图像 URL
-        // const imageUrls = Array.from({ length: 160 }, (_, i) => `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/200.jpg`);
-
         const imageUrls = selectedIndexes.map(i =>
             `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/${i}.jpg`
         );
-        let textureLoader;
-
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
@@ -91,8 +87,6 @@
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
-
-            textureLoader = new THREE.TextureLoader(); // 初始化 TextureLoader
 
             group = new THREE.Group();
             createPhotoSphere();
@@ -104,18 +98,33 @@
 
             animate();
         }
+
         function createPhotoSphere() {
             const radius = 17.6;  // 适配手机屏幕
+            const textureLoader = new THREE.TextureLoader();
 
             imageUrls.forEach((url, index) => {
-                textureLoader.load(url, (texture) => {
-                    // 禁用 Mipmaps，保持图像原始质量
-                    texture.generateMipmaps = true;
-                    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = 900;  // 调整为 1040x1040，增加20px边距
+                canvas.height = 1200;
 
-                    // 使用 LinearFilter 确保高质量渲染
+                const image = new Image();
+                image.crossOrigin = "Anonymous";
+                image.src = url
+
+                image.onload = () => {
+                    ctx.fillStyle = "white";  // 背景颜色，确保描边可见
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);  // 填充整个 canvas，确保背景显示
+
+                    // 在 canvas 上绘制图片，留 20px 边距
+                    ctx.drawImage(image, 20, 20, canvas.width - 40, canvas.height - 40);
+
+                    const texture = new THREE.CanvasTexture(canvas);
+                    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
                     texture.minFilter = THREE.LinearFilter;
                     texture.magFilter = THREE.LinearFilter;
+                    texture.generateMipmaps = true;
                     texture.flipY = false; // 解决默认 Y 轴镜像问题
                     texture.needsUpdate = true; // 确保 WebGL 正确更新纹理
 
@@ -126,6 +135,7 @@
                         side: THREE.DoubleSide,
                         transparent: true
                     });
+
                     const plane = new THREE.Mesh(geometry, material);
 
                     // **修复左右镜像问题**
@@ -143,9 +153,10 @@
                     plane.userData = { index };
 
                     group.add(plane);
-                });
+                };
             });
         }
+
         let touchStartTime = 0;
         let hasMoved = false;
 
