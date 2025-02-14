@@ -61,23 +61,10 @@
         let touchStartDistance = 0;  // 记录双指缩放初始距离
 
         const imageCount = 123;
-        const selectedCount = 100;
-
-        // 生成一个从 1 到 imageCount 的数组
-        const imageIndexes = Array.from({ length: imageCount }, (_, i) => i + 1);
-
-        // 打乱数组中的数字以确保随机性
-        for (let i = imageCount - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [imageIndexes[i], imageIndexes[j]] = [imageIndexes[j], imageIndexes[i]];
-        }
-
-        // 选取前 123 个不重复的随机图像索引
-        const selectedIndexes = imageIndexes.slice(0, selectedCount);
-
-        // 根据选中的索引生成图像 URL
-        const imageUrls = selectedIndexes.map(i =>
-            `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/${i}.jpg`
+        // const imageUrls = Array.from({ length: imageCount }, (_, i) => `https://picsum.photos/30/40?random=${i + 1}`);
+        const imageUrls = Array.from({ length: imageCount }, () =>
+        // `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/100.jpg`
+            `https://res.cloudinary.com/dckcwbmiz/image/upload/w_900,ar_3:4,c_fill,g_auto/v1739348723/${Math.floor(Math.random() * imageCount) + 1}.jpg`
         );
         function init() {
             scene = new THREE.Scene();
@@ -142,8 +129,8 @@
                     plane.scale.x = -1; // 让图片水平翻转
                     plane.scale.y = -1; // 让图片水平翻转
 
-                    const phi = Math.acos(-1 + (2 * index) / selectedCount);
-                    const theta = Math.sqrt(selectedCount * Math.PI) * phi;
+                    const phi = Math.acos(-1 + (2 * index) / imageCount);
+                    const theta = Math.sqrt(imageCount * Math.PI) * phi;
 
                     plane.position.x = radius * Math.sin(phi) * Math.cos(theta);
                     plane.position.y = radius * Math.cos(phi);
