@@ -94,6 +94,7 @@
                 const canvas = document.createElement("canvas");
                 const ctx = canvas.getContext("2d");
                 let pixelRatio = window.devicePixelRatio;
+                console.log('pixelRatio: ', pixelRatio);
                 canvas.width = 900 * pixelRatio;  // 调整为 1040x1040，增加20px边距
                 canvas.height = 1200 * pixelRatio;
 
