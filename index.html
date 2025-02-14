@@ -93,8 +93,9 @@
             imageUrls.forEach((url, index) => {
                 const canvas = document.createElement("canvas");
                 const ctx = canvas.getContext("2d");
-                canvas.width = 900 * devicePixelRatio;  // 调整为 1040x1040，增加20px边距
-                canvas.height = 1200 * devicePixelRatio;
+                let pixelRatio = window.devicePixelRatio;
+                canvas.width = 900 * pixelRatio;  // 调整为 1040x1040，增加20px边距
+                canvas.height = 1200 * pixelRatio;
 
                 const image = new Image();
                 image.crossOrigin = "Anonymous";
@@ -105,7 +106,7 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);  // 填充整个 canvas，确保背景显示
 
                     // 在 canvas 上绘制图片，留 20px 边距
-                    ctx.drawImage(image, 20 * devicePixelRatio, 20 * devicePixelRatio, canvas.width - 40 * devicePixelRatio, canvas.height - 40 * devicePixelRatio);
+                    ctx.drawImage(image, 20 * pixelRatio, 20 * pixelRatio, canvas.width - 40 * pixelRatio, canvas.height - 40 * pixelRatio);
 
                     const texture = new THREE.CanvasTexture(canvas);
                     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
