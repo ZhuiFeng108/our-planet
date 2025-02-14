@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>❤️我❤️们❤️的❤️星❤️球❤️</title>
+    <title>❤️我们的星球❤️</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
@@ -54,14 +54,14 @@
         let scene, camera, renderer, group;
         let isDragging = false, previousTouchPosition = { x: 0, y: 0 };
         let autoRotate = true, lastInteractionTime = 0;
-        let targetZoom = 100;  // 初始缩放调整为适合手机屏幕
+        let targetZoom = 2860;  // 初始缩放调整为适合手机屏幕
         let targetRotation = { x: null, y: null };
         let focusedImage = null;
         let focusTimeout = null;
         let touchStartDistance = 0;  // 记录双指缩放初始距离
 
-        const imageCount = 123;
-        const selectedCount = 100;
+        const imageCount = 160;
+        const selectedCount = 160;
 
         // 生成一个从 1 到 imageCount 的数组
         const imageIndexes = Array.from({ length: imageCount }, (_, i) => i + 1);
@@ -81,7 +81,7 @@
         );
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 3600);
             camera.position.z = targetZoom;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -100,7 +100,7 @@
         }
 
         function createPhotoSphere() {
-            const radius = 17.6;  // 适配手机屏幕
+            const radius = 520;  // 适配手机屏幕
             const textureLoader = new THREE.TextureLoader();
 
             imageUrls.forEach((url, index) => {
@@ -128,7 +128,7 @@
                     texture.flipY = false; // 解决默认 Y 轴镜像问题
                     texture.needsUpdate = true; // 确保 WebGL 正确更新纹理
 
-                    const geometry = new THREE.PlaneGeometry(3, 4); // 使 Plane 与 900x1200 适配
+                    const geometry = new THREE.PlaneGeometry(78, 108); // 使 Plane 与 900x1200 适配
 
                     const material = new THREE.MeshBasicMaterial({
                         map: texture,
@@ -208,7 +208,7 @@
                 let newDistance = getTouchDistance(event.touches);
                 let zoomFactor = newDistance / touchStartDistance;
                 targetZoom /= zoomFactor;
-                targetZoom = Math.max(22.6, Math.min(100, targetZoom));
+                targetZoom = Math.max(500, Math.min(2860, targetZoom));
                 touchStartDistance = newDistance;
             }
         }
@@ -254,7 +254,7 @@
 
             targetRotation.y = -spherical.theta;
             targetRotation.x = -(spherical.phi - Math.PI / 2);
-            targetZoom = 26;  // 放大到图片
+            targetZoom = 720;  // 放大到图片
 
             clearTimeout(focusTimeout);
             focusTimeout = setTimeout(() => {
