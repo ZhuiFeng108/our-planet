@@ -50,6 +50,7 @@
 
         // 监听触摸事件，用户首次触摸后播放音乐
         let hasTouched = false;
+        let hasClicked = false;
 
         let scene, camera, renderer, group;
         let isDragging = false, previousTouchPosition = { x: 0, y: 0 };
@@ -96,6 +97,11 @@
             document.addEventListener("touchmove", onTouchMove, { passive: false });
             document.addEventListener("touchend", onTouchEnd, { passive: false });
 
+            document.addEventListener("mousedown", onMouseDown, false);
+            document.addEventListener("mousemove", onMouseMove, false);
+            document.addEventListener("mouseup", onMouseUp, false);
+            document.addEventListener("wheel", onMouseWheel, false);
+
             animate();
         }
 
@@ -106,7 +112,7 @@
             imageUrls.forEach((url, index) => {
                 const canvas = document.createElement("canvas");
                 const ctx = canvas.getContext("2d");
-                canvas.width = 900;  // 调整为 1040x1040，增加20px边距
+                canvas.width = 900;  // 调整为 1040x1040，增加 20px 边距
                 canvas.height = 1200;
 
                 const image = new Image();
@@ -161,24 +167,19 @@
         let hasMoved = false;
 
         function onTouchStart(event) {
-            document.body.addEventListener("touchstart", () => {
+            if (!hasTouched) {
+                hasTouched = true;  // 标记为已触摸
 
-                if (!hasTouched) {
-                    hasTouched = true;  // 标记为已触摸
+                // 播放随机音乐
+                playRandomMusic();
 
-                    // 播放随机音乐
+                // 每当一首歌播放完时，再次随机播放
+                const audioElement = document.getElementById("background-music");
+                audioElement.onended = () => {
                     playRandomMusic();
+                };
+            }
 
-                    // 每当一首歌播放完时，再次随机播放
-                    const audioElement = document.getElementById("background-music");
-                    audioElement.onended = () => {
-                        playRandomMusic();
-                    };
-
-                    // 移除事件监听器，防止后续触摸再次触发
-                    document.body.removeEventListener("touchstart", arguments.callee);
-                }
-            });
             if (event.touches.length === 1) {
                 isDragging = true;
                 hasMoved = false;  // 初始化移动标记
@@ -238,6 +239,73 @@
                     stopAutoRotate();
                 }
             }
+        }
+
+        function onMouseDown(event) {
+            if (!hasClicked) {
+                hasClicked = true;  // 标记为已触摸
+
+                // 播放随机音乐
+                playRandomMusic();
+
+                // 每当一首歌播放完时，再次随机播放
+                const audioElement = document.getElementById("background-music");
+                audioElement.onended = () => {
+                    playRandomMusic();
+                };
+            }
+
+            isDragging = true;
+            hasMoved = false;  // 初始化移动标记
+            touchStartTime = Date.now();  // 记录触摸开始时间
+            previousTouchPosition = { x: event.clientX, y: event.clientY };
+            stopAutoRotate();
+            cancelFocus();
+        }
+
+        function onMouseMove(event) {
+            if (isDragging) {
+                hasMoved = true;  // 标记已移动
+                const deltaX = event.clientX - previousTouchPosition.x;
+                const deltaY = event.clientY - previousTouchPosition.y;
+
+                group.rotation.y += deltaX * 0.003;
+                group.rotation.x += deltaY * 0.003;
+
+                previousTouchPosition = { x: event.clientX, y: event.clientY };
+            }
+        }
+
+        function onMouseUp(event) {
+            if (isDragging) {
+                isDragging = false;
+                resumeAutoRotate();
+            }
+
+            const touchTime = Date.now() - touchStartTime;  // 计算触摸时长
+
+            // **只有单击、触摸时间短且没有移动时才触发 focusOnImage**
+            if (!hasMoved && touchTime < 200) {
+                const raycaster = new THREE.Raycaster();
+                const mousePoint = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 - 1,
+                    -(event.clientY / window.innerHeight) * 2 + 1
+                );
+
+                raycaster.setFromCamera(mousePoint, camera);
+                const intersects = raycaster.intersectObjects(group.children);
+
+                if (intersects.length > 0) {
+                    focusOnImage(intersects[0].object);  // 只有真正点击到图片才聚焦
+                    stopAutoRotate();
+                }
+            }
+        }
+
+        function onMouseWheel(event) {
+            event.preventDefault();
+            targetZoom += event.deltaY * 1.6;
+            targetZoom = Math.max(500, Math.min(2860, targetZoom));
         }
 
         function getTouchDistance(touches) {
